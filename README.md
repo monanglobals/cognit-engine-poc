@@ -19,9 +19,15 @@ TypeScript path mapping in `tsconfig.base.json`.
 
 ```sh
 pnpm install
-pnpm dev:api     # http://localhost:3333/api
+cp .env.example .env   # then fill in OPENAI_API_KEY
+pnpm dev:api     # http://localhost:3343/api
 pnpm dev:web     # http://localhost:3000
 ```
+
+The API validates its environment at boot (`apps/api/src/config/env.validation.ts`);
+a missing or malformed variable stops the process with a readable report instead of
+failing later at runtime. It listens on `3343` rather than the usual `3333` because
+`globals-cognit` already holds that port locally.
 
 ## Tasks
 
