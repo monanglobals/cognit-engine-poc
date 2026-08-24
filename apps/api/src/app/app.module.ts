@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { appConfig } from '../config/configuration';
 import { validateEnv } from '../config/env.validation';
+import { DatabaseModule } from '../database/database.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -17,6 +18,7 @@ import { AppService } from './app.service';
       validate: validateEnv,
       load: [appConfig],
     }),
+    DatabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
