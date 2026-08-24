@@ -1,19 +1,28 @@
 import { Test } from '@nestjs/testing';
+import { DatabaseHealthIndicator } from '../database/database.health';
 import { AppService } from './app.service';
 
 describe('AppService', () => {
-  let service: AppService;
+  const database = { check: jest.fn() };
 
-  beforeAll(async () => {
+  const createService = async () => {
     const app = await Test.createTestingModule({
-      providers: [AppService],
+      providers: [
+        AppService,
+        { provide: DatabaseHealthIndicator, useValue: database },
+      ],
     }).compile();
 
-    service = app.get<AppService>(AppService);
+    return app.get<AppService>(AppService);
+  };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
   });
 
   describe('getData', () => {
-    it('should greet with the app name', () => {
+    it('should greet with the app name', async () => {
+      const service = await createService();
       expect(service.getData()).toEqual({
         message: 'Hello from cognit-engine-poc API',
       });
@@ -21,8 +30,26 @@ describe('AppService', () => {
   });
 
   describe('getHealth', () => {
-    it('should report the api as healthy', () => {
-      expect(service.getHealth()).toEqual({ service: 'api', status: 'ok' });
+    it('reports the api as healthy when the database answers', async () => {
+      database.check.mockResolvedValue('ok');
+      const service = await createService();
+
+      await expect(service.getHealth()).resolves.toEqual({
+        service: 'api',
+        status: 'ok',
+        dependencies: { database: 'ok' },
+      });
+    });
+
+    it('degrades when the database is unreachable', async () => {
+      database.check.mockResolvedValue('down');
+      const service = await createService();
+
+      await expect(service.getHealth()).resolves.toEqual({
+        service: 'api',
+        status: 'degraded',
+        dependencies: { database: 'down' },
+      });
     });
   });
 });

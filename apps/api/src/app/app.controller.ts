@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import type { HealthCheck } from '@cognit-engine-poc/shared';
 import { AppService } from './app.service';
 
 @Controller()
@@ -11,7 +12,7 @@ export class AppController {
   }
 
   @Get('health')
-  getHealth() {
+  getHealth(): Promise<HealthCheck> {
     return this.appService.getHealth();
   }
 }
