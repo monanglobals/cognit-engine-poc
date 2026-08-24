@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AgentModule } from '../agent/agent.module';
 import { ChatModule } from '../chat/chat.module';
 import { appConfig } from '../config/configuration';
 import { validateEnv } from '../config/env.validation';
@@ -20,6 +21,7 @@ import { AppService } from './app.service';
       load: [appConfig],
     }),
     DatabaseModule,
+    AgentModule,
     ChatModule,
   ],
   controllers: [AppController],
