@@ -47,7 +47,7 @@ describe('MessageRepository', () => {
 
     expect(typeorm.find).toHaveBeenCalledWith({
       where: { conversationId: 'c1' },
-      order: { createdAt: 'DESC' },
+      order: { seq: 'DESC' },
       take: DEFAULT_HISTORY_LIMIT,
     });
   });

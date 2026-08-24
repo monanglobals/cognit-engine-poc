@@ -31,6 +31,8 @@ export class MessageRepository {
    * The most recent `limit` messages, oldest first — the order a model expects
    * to read them in. Fetching descending and reversing keeps the tail of a long
    * conversation rather than its beginning.
+   *
+   * Ordered by `seq`, not `created_at`: see the note on Message.seq.
    */
   async findByConversation(
     conversationId: string,
@@ -38,7 +40,7 @@ export class MessageRepository {
   ): Promise<Message[]> {
     const messages = await this.messages.find({
       where: { conversationId },
-      order: { createdAt: 'DESC' },
+      order: { seq: 'DESC' },
       take: limit,
     });
 
