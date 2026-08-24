@@ -1,0 +1,30 @@
+/tmp
+/out-tsc
+
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.pnp
+.pnp.js
+
+.vscode/*
+# Project exclude paths
+/.nx/cache/
+/.nx/workspace-data/
+/apps/web/.next/
+/apps/web/node_modules/
+/dist/
+/libs/shared/node_modules/
+# IDE
+.idea
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env.local
+.env.*.local
