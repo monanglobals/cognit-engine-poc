@@ -1,0 +1,111 @@
+# Local infrastructure for cognit-engine-poc: Postgres + Temporal.
+#
+# Ports are deliberately offset from the defaults because other stacks on this
+# machine (globals-cognit) already hold 5432/7233/8233. Override any of them in
+# a .env file next to this one — see .env.example.
+#
+#   docker compose up -d          bring everything up
+#   docker compose down          stop (data survives)
+#   docker compose down -v       stop and wipe the Postgres volume
+name: cognit-engine-poc
+
+services:
+  # Postgres 16. The pgvector image is stock Postgres with the `vector`
+  # extension available (not enabled until you CREATE EXTENSION), matching the
+  # image line already used across the other Globals stacks.
+  #
+  # Hosts two things: the application database, and Temporal's own schema
+  # (databases `temporal` and `temporal_visibility`, created by auto-setup).
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cognit-poc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-cognit_engine_poc}
+    ports:
+      - '${POSTGRES_PORT:-5442}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cognit_engine_poc}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Temporal server. `auto-setup` creates the two Temporal databases and runs
+  # the schema migrations on first boot, then starts the server.
+  temporal:
+    image: temporalio/auto-setup:${TEMPORAL_VERSION:-1.29.3}
+    container_name: cognit-poc-temporal
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # `postgres12` is the driver name for Postgres 12 and newer, 16 included.
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-postgres}
+      DBNAME: ${TEMPORAL_DB:-temporal}
+      VISIBILITY_DBNAME: ${TEMPORAL_VISIBILITY_DB:-temporal_visibility}
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - '${TEMPORAL_PORT:-7333}:7233'
+    volumes:
+      - ./infra/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'temporal',
+          'operator',
+          'cluster',
+          'health',
+          '--address',
+          'temporal:7233',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # Web UI for browsing workflows, task queues and event histories.
+  temporal-ui:
+    image: temporalio/ui:${TEMPORAL_UI_VERSION:-2.53.3}
+    container_name: cognit-poc-temporal-ui
+    restart: unless-stopped
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000,http://localhost:3333
+    ports:
+      - '${TEMPORAL_UI_PORT:-8333}:8080'
+
+  # `temporal` CLI in a container, for when you don't have it installed locally:
+  #   docker compose exec temporal-admin-tools temporal workflow list
+  temporal-admin-tools:
+    image: temporalio/admin-tools:${TEMPORAL_ADMIN_TOOLS_VERSION:-1.29.7-tctl-1.18.4-cli-1.7.2}
+    container_name: cognit-poc-temporal-admin-tools
+    restart: unless-stopped
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres-data:

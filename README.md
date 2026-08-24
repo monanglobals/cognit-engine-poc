@@ -35,6 +35,40 @@ pnpm dev:web     # http://localhost:3000
 
 Target a single project with `nx <target> <project>`, e.g. `nx test shared`.
 
+## Local infrastructure
+
+Postgres and Temporal run in Docker. Ports are offset from the defaults because
+other stacks on this machine (`globals-cognit`) already hold 5432/7233/8233.
+
+```sh
+pnpm infra:up      # start   (docker compose up -d)
+pnpm infra:ps      # status
+pnpm infra:logs    # tail logs
+pnpm infra:down    # stop, keeping data
+pnpm infra:reset   # stop, wipe the Postgres volume, start again
+```
+
+| service         | host port | notes                                                             |
+| --------------- | --------- | ----------------------------------------------------------------- |
+| Postgres        | `5442`    | `postgresql://postgres:postgres@localhost:5442/cognit_engine_poc` |
+| Temporal (gRPC) | `7333`    | client address `localhost:7333`, namespace `default`              |
+| Temporal UI     | `8333`    | http://localhost:8333                                             |
+
+One Postgres instance backs everything: `cognit_engine_poc` for the app, plus
+`temporal` and `temporal_visibility`, which the `auto-setup` image creates and
+migrates on first boot. Workflow state therefore survives `infra:down`; use
+`infra:reset` to start from an empty database.
+
+The `temporal` CLI is available without a local install:
+
+```sh
+docker compose exec temporal-admin-tools temporal workflow list
+```
+
+Copy `.env.example` to `.env` to override ports, credentials or image versions.
+Image versions are pinned in `docker-compose.yml`; the app itself is not
+containerised, it runs on the host against these services.
+
 ## Adding projects
 
 ```sh

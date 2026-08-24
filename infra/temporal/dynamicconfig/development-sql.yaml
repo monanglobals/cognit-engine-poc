@@ -1,0 +1,11 @@
+# Temporal dynamic config for local development.
+# Mounted read-only into the server at config/dynamicconfig/development-sql.yaml.
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+
+# Dev-only: makes custom Search Attributes visible immediately instead of
+# waiting for the cache to refresh. Do not enable this in production.
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}
