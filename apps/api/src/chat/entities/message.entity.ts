@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Generated,
   Index,
   JoinColumn,
   ManyToOne,
@@ -12,10 +13,22 @@ import { Conversation } from './conversation.entity';
 
 @Entity('messages')
 // Every read is "the messages of one conversation, in order".
-@Index(['conversationId', 'createdAt'])
+@Index(['conversationId', 'seq'])
 export class Message {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  /**
+   * Insertion order, and what history is actually sorted by. `created_at`
+   * cannot do this job: it defaults to now(), which is the *transaction*
+   * timestamp, so two messages written in one transaction get identical
+   * timestamps and then sort arbitrarily.
+   *
+   * bigint, so pg hands it back as a string — it never leaves the repository.
+   */
+  @Column({ type: 'bigint' })
+  @Generated('increment')
+  seq!: string;
 
   @Column({ name: 'conversation_id', type: 'uuid' })
   conversationId!: string;
